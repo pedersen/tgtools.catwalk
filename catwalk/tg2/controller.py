@@ -83,6 +83,8 @@ class CatwalkModel(BaseController):
     def edit(self, model_name, *args, **kw):
         if args[-1] == 'update':
             return self.update(model_name, *args[:-1], **kw)
+        if args[-1] == 'delete':
+            return self.delete(model_name, *args[:-1], **kw)
         #assign all of the pks to the session for extraction
         model = helper.get_model(model_name, self.provider.metadata)
         table_name = helper.get_identifier(model)
@@ -125,8 +127,17 @@ class CatwalkModel(BaseController):
         self.provider.add(table_name, values=kw)
         redirect('./')
 
-    def delete(self, model_name, **kw):
-        pass
+    @expose()
+    def delete(self, model_name, *args, **kw):
+        model = helper.get_model(model_name, self.provider.metadata)
+        table_name = helper.get_identifier(model)
+        pks = self.provider.get_primary_keys(table_name)
+        kw = {}
+        for i, pk in  enumerate(pks):
+            kw[pk] = args[i]
+
+        self.provider.delete(table_name, values=kw)
+        redirect('../')
 
 
 class Catwalk(BaseController):
