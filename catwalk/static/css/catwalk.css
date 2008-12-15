@@ -21,9 +21,9 @@ a{
 
 #main_view {
   position:fixed;
-  left:120px;
+  left:175px;
   height:100%;
-  width:85%;
+  width:80%;
   float:right;
   padding-left: 5px;
   margin:0px;
@@ -36,9 +36,10 @@ a{
   margin:0px 0px 0px 0px;
   padding:8px;
   padding-top:0px;
-  width:100px;
+  width:150px;
   height:100%;
   position:fixed;
+  overflow:auto;
 }
 
 #model_list a{
