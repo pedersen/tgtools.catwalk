@@ -19,7 +19,7 @@ from tg import TGController, redirect
 
 from dbsprockets.modelsprockets import ModelSprockets
 
-from catwalk.decorators import validate, crudErrorCatcher
+from catwalk.decorators import validate, crudErrorCatcher, validate_explicit
 from catwalk.resources import CatwalkCss
 
 from dbsprockets.primitives import SAORMDBHelper as helper
@@ -28,7 +28,7 @@ class BaseController(TGController):
     """Basis TurboGears controller class which is derived from
     TGController
     """
-
+    sprockets = None
     def __init__(self, provider, *args, **kwargs):
         self.provider = provider
         self.sprockets = ModelSprockets(provider)
@@ -49,6 +49,7 @@ class BaseController(TGController):
 
 class CatwalkModel(BaseController):
 
+    sprockets = None
     def _get_value(self, config_name, model_name, **kw):
         """This thing has some side effects!"""
         pylons.c.models_view = self.models_view
@@ -97,7 +98,7 @@ class CatwalkModel(BaseController):
         return dict(value=value, model_name=model_name, action='update', root_catwalk=root_catwalk, root_model=root_model)
 
     @expose()
-    @validate(error_handler=edit)
+    @validate_explicit(sprockets=sprockets, error_handler=edit)
     @crudErrorCatcher(errorType=sqlalchemy.exceptions.IntegrityError, error_handler='edit')
     @crudErrorCatcher(errorType=sqlalchemy.exceptions.ProgrammingError, error_handler='edit')
     @crudErrorCatcher(errorType=sqlalchemy.exceptions.DataError, error_handler='edit')
@@ -114,7 +115,7 @@ class CatwalkModel(BaseController):
         redirect('../')
 
     @expose()
-    @validate(error_handler=add)
+    @validate_explicit(sprockets=sprockets, error_handler=edit)
     @crudErrorCatcher(errorType=sqlalchemy.exceptions.IntegrityError, error_handler='add')
     @crudErrorCatcher(errorType=sqlalchemy.exceptions.ProgrammingError, error_handler='add')
     def create(self, model_name, **kw):

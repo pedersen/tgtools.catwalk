@@ -14,15 +14,15 @@
     </div>
     <div id="main_view">
         <h1>Welcome to Catwalk 2.0</h1>
-        CatWalk is a database manipulation application built on top of TurboGears.
+        Catwalk is a database manipulation application built on top of TurboGears.
         With it you can easily interact with your application data model and manage your data.
         Think of it as phpMyAdmin or pgAdmin at the ORM level instead of the RDBMS. It is database
-        agnostic, all it's information is pulled from of the SQLAlchemy session - not from the underlying data
+        agnostic, all it's information is pulled from the SQLAlchemy Session - not from the underlying data
         store.
 
         <h2>Securing Catwalk</h2>
 
-        By default, Catwalk is not secured.  This is because it is up to the devloper to provide
+        By default, Catwalk is not secured.  This is because it is up to the developer to provide
         the method for security, but it can easily be secured by extending the Catwalk controller
         object and using
         the secure controller methods provided by Turbogears.  Here is an example code snippet
@@ -34,7 +34,7 @@ from catwalk.tg2 import Catwalk
 from repoze.what.predicates import in_group
 
 class SecuredCatwalk(Catwalk):
-    require = in_group('admin')
+    allow_only = in_group('manager')
 </pre>
         Instantiate Catwalk
 <pre class="code">
