@@ -27,6 +27,7 @@ a{
   float:right;
   padding-left: 5px;
   margin:0px;
+  overflow:auto;
 }
 
 #model_list {
@@ -71,6 +72,13 @@ a{
 label.required{
   color:blue;
 }
+tr.even:hover{
+  background:#d3e6fd;
+  }
+tr.odd:hover{
+  background:#d3e6fd;
+}
+
 .odd{
-  background:#e6e6e6;
+  background:#e6e6e6
 }

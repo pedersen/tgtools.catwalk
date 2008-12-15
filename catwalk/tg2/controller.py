@@ -19,8 +19,10 @@ from tg import TGController, redirect
 
 from dbsprockets.modelsprockets import ModelSprockets
 
-from catwalk.decorators import validate
+from catwalk.decorators import validate, crudErrorCatcher
 from catwalk.resources import CatwalkCss
+
+from dbsprockets.primitives import SAORMDBHelper as helper
 
 class BaseController(TGController):
     """Basis TurboGears controller class which is derived from
@@ -47,49 +49,81 @@ class BaseController(TGController):
 
 class CatwalkModel(BaseController):
 
-    def _get_value(self, config_name, model_name):
+    def _get_value(self, config_name, model_name, **kw):
         """This thing has some side effects!"""
         pylons.c.models_view = self.models_view
         CatwalkCss.inject()
         sprocket = self.sprockets[config_name+'__'+model_name]
-        value = sprocket.session.get_value()
+        value = sprocket.session.get_value(**kw)
         pylons.c.widget  = sprocket.view.__widget__
         return value
 
     @expose('genshi:catwalk.templates.base')
     def default(self, model_name, action=None, *args, **kw):
-        print model_name, action
         if action is None:
             if not pylons.request.path_info.endswith('/'):
                 redirect(pylons.request.path_info+'/')
             value = self._get_value('listing', model_name)
-            return dict(value=value, model_name=model_name, action=None)
+            return dict(value=value, model_name=model_name, action=None, root_catwalk='../../', root_model='./')
         if action in ['add', 'metadata', 'create']:
             return getattr(self, action)(model_name=model_name, *args, **kw)
-
+        return self.edit(model_name, action, *args, **kw)
 
     @expose('genshi:catwalk.templates.base')
     def metadata(self, model_name, **kw):
         value = self._get_value('metadata', model_name)
-        return dict(value=value, model_name=model_name, action=None)
+        return dict(value=value, model_name=model_name, action=None, root_catwalk='../../', root_model='./')
 
     @expose('genshi:catwalk.templates.base')
     def add(self, model_name, **kw):
         value = self._get_value('add', model_name, **kw)
-        return dict(value=value, model_name=model_name, action='./create')
+        return dict(value=value, model_name=model_name, action='create', root_catwalk='../../', root_model='./')
 
     @expose('genshi:catwalk.templates.base')
-    def edit(self, model_name, **kw):
-        value = self._get_value('edit', model_name)
-        return dict(value=value, model_name=model_name)
+    def edit(self, model_name, *args, **kw):
+        if args[-1] == 'update':
+            return self.update(model_name, *args[:-1], **kw)
+        #assign all of the pks to the session for extraction
+        model = helper.get_model(model_name, self.provider.metadata)
+        table_name = helper.get_identifier(model)
+        pks = self.provider.get_primary_keys(table_name)
+        for i, pk in  enumerate(pks):
+            kw[pk] = args[i]
+        value = self._get_value('edit', model_name, **kw)
+        root_model = '../'*len(pks)
+        root_catwalk = root_model+'../../'
+        return dict(value=value, model_name=model_name, action='update', root_catwalk=root_catwalk, root_model=root_model)
 
     @expose()
-    def create(self, model_name, **kw):
-        print 'here'
-        redirect('../%s'%model_name)
+    @validate(error_handler=edit)
+    @crudErrorCatcher(errorType=sqlalchemy.exceptions.IntegrityError, error_handler='edit')
+    @crudErrorCatcher(errorType=sqlalchemy.exceptions.ProgrammingError, error_handler='edit')
+    @crudErrorCatcher(errorType=sqlalchemy.exceptions.DataError, error_handler='edit')
+    def update(self, model_name, *args, **kw):
+        model = helper.get_model(model_name, self.provider.metadata)
+        table_name = helper.get_identifier(model)
+        params = pylons.request.params.copy()
+        pks = self.provider.get_primary_keys(table_name)
+        for i, pk in  enumerate(pks):
+            params[pk] = args[i]
+        self.provider.create_relationships(table_name, params)
 
-    def update(self, model_name, **kw):
-        pass
+        self.provider.edit(table_name, values=kw)
+        redirect('../')
+
+    @expose()
+    @validate(error_handler=add)
+    @crudErrorCatcher(errorType=sqlalchemy.exceptions.IntegrityError, error_handler='add')
+    @crudErrorCatcher(errorType=sqlalchemy.exceptions.ProgrammingError, error_handler='add')
+    def create(self, model_name, **kw):
+        model = helper.get_model(model_name, self.provider.metadata)
+        table_name = helper.get_identifier(model)
+
+        params = pylons.request.params.copy()
+        self.provider.create_relationships(table_name, params)
+
+        self.provider.add(table_name, values=kw)
+        redirect('./')
 
     def delete(self, model_name, **kw):
         pass
