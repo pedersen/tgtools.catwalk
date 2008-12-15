@@ -1,0 +1,26 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+                      "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:py="http://genshi.edgewall.org/"
+      xmlns:xi="http://www.w3.org/2001/XInclude">
+<xi:include href="./catwalk_master.html" />
+<xi:include href="./catwalk_header.html" />
+<head></head>
+<body>
+      <div id="model_list">
+            <h2><a href='../../'>Catwalk</a></h2>
+            <h3>Models</h3>
+            ${XML(tmpl_context.models_view(controller='../../'))}
+      </div>
+      <div id="main_view">
+      <h3>${model_name}s</h3>
+      <a href='./'>listing</a> | <a href='./add'>add</a> | <a href='./metadata'>metadata</a>
+      <hr/>
+      ${XML(tmpl_context.widget(value=value, action=action))}
+      <py:if test="len(value) == 0">
+      No Records Found.
+      </py:if>
+      </div>
+</body>
+
+</html>

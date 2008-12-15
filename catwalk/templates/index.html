@@ -1,0 +1,63 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+                      "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:py="http://genshi.edgewall.org/"
+      xmlns:xi="http://www.w3.org/2001/XInclude">
+<xi:include href="./catwalk_master.html" />
+<xi:include href="./catwalk_header.html" />
+<head></head>
+<body>
+    <div id="model_list">
+        <h2><a href='./'>Catwalk</a></h2>
+        <h3>Models</h3>
+         ${XML(tmpl_context.models_view(controller='./'))}
+    </div>
+    <div id="main_view">
+        <h1>Welcome to Catwalk 2.0</h1>
+        CatWalk is a database manipulation application built on top of TurboGears.
+        With it you can easily interact with your application data model and manage your data.
+        Think of it as phpMyAdmin or pgAdmin at the ORM level instead of the RDBMS. It is database
+        agnostic, all it's information is pulled from of the SQLAlchemy session - not from the underlying data
+        store.
+
+        <h2>Securing Catwalk</h2>
+
+        By default, Catwalk is not secured.  This is because it is up to the devloper to provide
+        the method for security, but it can easily be secured by extending the Catwalk controller
+        object and using
+        the secure controller methods provided by Turbogears.  Here is an example code snippet
+        to showing how you could secure your catwalk so that only admins can view it:<br/><br/>
+
+        Subclass Catwalk
+<pre class= "code">
+from catwalk.tg2 import Catwalk
+from repoze.what.predicates import in_group
+
+class SecuredCatwalk(Catwalk):
+    require = in_group('admin')
+</pre>
+        Instantiate Catwalk
+<pre class="code">
+from myproject.model import metadata
+from dbsprockets.saprovider import SAProvider
+
+catwalk = SecuredCatwalk(SAProvider(metadata))
+</pre>
+
+        <h2>Using Catwalk</h2>
+        You can use Catwalk for all of your crud operations, as well as to view your database schema.
+        Since catwalk is based on <a href="http://dbsprockets.googlecode.com/">dbsprockets</a>
+        declaratives, you can easily recreate the forms
+        with customizations within your application.  On the left you can see a menu of objects
+        which provide links to data within your application.
+
+        <h2>More info</h2>
+        For more information on Catwalk, please reference the TurboGears <a href="http://turbogears.org/2.0/docs/">documentation</a>
+        , visit the <a href="http://groups.google.com/group/turbogears">mailing list</a>
+        or drop in and ask a question at <a href="irc://irc.freenode.net/#turbogears">#turbogears</a>
+        on irc.freenode.net.
+
+    </div>
+</body>
+
+</html>
