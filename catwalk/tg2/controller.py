@@ -16,13 +16,15 @@ from tg.controllers import redirect, DecoratedController
 from tw.api import Widget, CSSLink, Link
 import pylons
 from tg import TGController, redirect
-
+from tg.flash import flash, get_flash
 from dbsprockets.modelsprockets import ModelSprockets
 
-from catwalk.decorators import validate, crudErrorCatcher, validate_explicit
+from catwalk.decorators import validate, crudErrorCatcher, validate
 from catwalk.resources import CatwalkCss
 
 from dbsprockets.primitives import SAORMDBHelper as helper
+
+from webhelpers.html.builder import literal
 
 class BaseController(TGController):
     """Basis TurboGears controller class which is derived from
@@ -66,8 +68,17 @@ class CatwalkModel(BaseController):
                 redirect(pylons.request.path_info+'/')
             value = self._get_value('listing', model_name)
             return dict(value=value, model_name=model_name, action=None, root_catwalk='../../', root_model='./')
-        if action in ['add', 'metadata', 'create']:
-            return getattr(self, action)(model_name=model_name, *args, **kw)
+        
+        if action in ['add', 'metadata']:
+            self.start_response = pylons.request.start_response
+            return self._perform_call(None, dict(url=action+'/'+model_name, params=kw))
+
+        elif action == 'create':
+            self.start_response = pylons.request.start_response
+            r = self._perform_call(None, dict(url='create/'+model_name, params=kw))
+            if isinstance(r, literal):
+                return r
+            redirect('../'+model_name)
         return self.edit(model_name, action, *args, **kw)
 
     @expose('genshi:catwalk.templates.base')
@@ -77,7 +88,8 @@ class CatwalkModel(BaseController):
 
     @expose('genshi:catwalk.templates.base')
     def add(self, model_name, **kw):
-        value = self._get_value('add', model_name, **kw)
+        value = self._get_value('add', model_name, values=kw)
+        flash('something')
         return dict(value=value, model_name=model_name, action='create', root_catwalk='../../', root_model='./')
 
     @expose('genshi:catwalk.templates.base')
@@ -98,10 +110,10 @@ class CatwalkModel(BaseController):
         return dict(value=value, model_name=model_name, action='update', root_catwalk=root_catwalk, root_model=root_model)
 
     @expose()
-    @validate_explicit(sprockets=sprockets, error_handler=edit)
-    @crudErrorCatcher(errorType=sqlalchemy.exceptions.IntegrityError, error_handler='edit')
-    @crudErrorCatcher(errorType=sqlalchemy.exceptions.ProgrammingError, error_handler='edit')
-    @crudErrorCatcher(errorType=sqlalchemy.exceptions.DataError, error_handler='edit')
+    @validate(error_handler=edit)
+    @crudErrorCatcher(errorType=sqlalchemy.exceptions.IntegrityError, error_handler=edit)
+    @crudErrorCatcher(errorType=sqlalchemy.exceptions.ProgrammingError, error_handler=edit)
+    @crudErrorCatcher(errorType=sqlalchemy.exceptions.DataError, error_handler=edit)
     def update(self, model_name, *args, **kw):
         model = helper.get_model(model_name, self.provider.metadata)
         table_name = helper.get_identifier(model)
@@ -115,9 +127,10 @@ class CatwalkModel(BaseController):
         redirect('../')
 
     @expose()
-    @validate_explicit(sprockets=sprockets, error_handler=edit)
-    @crudErrorCatcher(errorType=sqlalchemy.exceptions.IntegrityError, error_handler='add')
-    @crudErrorCatcher(errorType=sqlalchemy.exceptions.ProgrammingError, error_handler='add')
+    @validate(error_handler=add)
+    @crudErrorCatcher(errorType=sqlalchemy.exceptions.IntegrityError, error_handler=add)
+    @crudErrorCatcher(errorType=sqlalchemy.exceptions.ProgrammingError, error_handler=add)
+    @crudErrorCatcher(errorType=sqlalchemy.exceptions.DataError, error_handler=add)
     def create(self, model_name, **kw):
         model = helper.get_model(model_name, self.provider.metadata)
         table_name = helper.get_identifier(model)
@@ -126,7 +139,7 @@ class CatwalkModel(BaseController):
         self.provider.create_relationships(table_name, params)
 
         self.provider.add(table_name, values=kw)
-        redirect('./')
+        raise redirect('../')
 
     @expose()
     def delete(self, model_name, *args, **kw):

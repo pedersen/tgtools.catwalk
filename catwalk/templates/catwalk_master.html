@@ -4,18 +4,17 @@
       xmlns:py="http://genshi.edgewall.org/"
       xmlns:xi="http://www.w3.org/2001/XInclude"
       py:strip="">
-<?python
-import tg
-tg_flash = tg.get_flash()
-?>
 <head py:match="head" py:attrs="select('@*')">
     <meta content="text/html; charset=UTF-8" http-equiv="content-type" py:replace="''"/>
     <title py:replace="''">Catwalk 2.0</title>
     <meta py:replace="select('*')"/>
 </head>
 <body py:match="body" py:attrs="select('@*')">
+    <div id="${tg.flash_status}" py:if="tg.flash" class="flash"
+     py:content="tg.flash">
+    </div> 
     <div id="main_content">
         <div py:replace="select('*|text()')"/>
     </div>
-</body>
+    </body>
 </html>

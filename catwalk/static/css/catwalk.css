@@ -83,3 +83,7 @@ tr.odd:hover{
 .odd{
   background:#e6e6e6
 }
+.fielderror{
+  color:red;
+  font-weight:bold;
+}
