@@ -7,8 +7,8 @@ from tg.controllers import _object_dispatch, flash
 class validate(tgValidate):
     def __init__(self, error_handler=None, *args,**kw):
         self.error_handler = error_handler
+        self.needs_controller = True
         class Validators(object):
-            needs_controller = True
             def validate(self, controller, params):
                 #pull the sprocket out of the cache
                 sprocket = controller.im_self.sprockets[params['dbsprockets_id']]
