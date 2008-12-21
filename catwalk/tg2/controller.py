@@ -18,11 +18,10 @@ import pylons
 from tg import TGController, redirect
 from tg.flash import flash, get_flash
 from dbsprockets.modelsprockets import ModelSprockets
+from dbsprockets.providerselector import SAORMSelector
 
 from catwalk.decorators import validate, crudErrorCatcher, validate
 from catwalk.resources import CatwalkCss
-
-from dbsprockets.providerselector import SAORMSelector
 
 from webhelpers.html.builder import literal
 
@@ -33,25 +32,22 @@ class BaseController(TGController):
     sprockets = None
     def __init__(self, session, metadata=None, *args, **kwargs):
         self.session = session
+        #initialize the sa provider so we can get information about the classes
         self.provider = SAORMSelector.get_provider(None, session.bind, session=session)
-        self.sprockets = ModelSprockets(session, metadata)
         #initialize model view cache
+        self.sprockets = ModelSprockets(session, metadata)
 
     def _get_value(self, config_name, model_name, **kw):
-        """This thing has some side effects!"""
         pylons.c.models_view = self.models_view
         CatwalkCss.inject()
         key = config_name+'__'+model_name
-        print '%'*80
-        print key
         sprocket = self.sprockets[key]
-        print sprocket.session.__entity__
         value = sprocket.session.get_value(**kw)
         pylons.c.widget  = sprocket.view.__widget__
         return value
 
     def _get_model_view(self):
-        #commonly used views
+        """get the highest level view"""
         sprocket = self.sprockets['model_view']
         self.models_value = sprocket.session.get_value()
         self.models_view  = sprocket.view.__widget__
@@ -126,9 +122,8 @@ class CatwalkModel(BaseController):
         params = pylons.request.params.copy()
         for i, pk in  enumerate(pks):
             params[pk] = args[i]
-#        self.provider.create_relationships(model, params)
 
-        self.provider.update(model, values=kw)
+        self.provider.update(model, params=kw)
         redirect('../')
 
     @expose()
@@ -139,7 +134,6 @@ class CatwalkModel(BaseController):
     def create(self, model_name, **kw):
         model = self.provider.get_entity(model_name)
         params = pylons.request.params.copy()
-        #self.provider.create_relationships(table_name, params)
 
         self.provider.create(model, values=kw)
         raise redirect('../')
