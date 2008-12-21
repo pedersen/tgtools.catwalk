@@ -17,9 +17,6 @@
       <a href='${root_model}'>listing</a> | <a href='${root_model}add'>add</a> | <a href='${root_model}metadata'>metadata</a>
       <hr/>
       ${XML(tmpl_context.widget(value=value, action=action, controller='./'))}
-      <py:if test="len(value) == 0">
-      No Records Found.
-      </py:if>
       </div>
 </body>
 
