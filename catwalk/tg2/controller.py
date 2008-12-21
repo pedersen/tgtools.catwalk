@@ -42,7 +42,7 @@ class BaseController(TGController):
         CatwalkCss.inject()
         key = config_name+'__'+model_name
         sprocket = self.sprockets[key]
-        value = sprocket.session.get_value(**kw)
+        value = sprocket.session.get_value(kw)
         pylons.c.widget  = sprocket.view.__widget__
         return value
 
@@ -81,7 +81,7 @@ class CatwalkModel(BaseController):
             r = self._perform_call(None, dict(url='create/'+model_name, params=kw))
             if isinstance(r, literal):
                 return r
-            redirect('../'+model_name)
+            redirect(str('../'+model_name))
         return self.edit(model_name, action, *args, **kw)
 
     @expose('genshi:catwalk.templates.base')
@@ -92,7 +92,7 @@ class CatwalkModel(BaseController):
     @expose('genshi:catwalk.templates.base')
     def add(self, model_name, **kw):
         value = self._get_value('add', model_name, values=kw)
-        flash('something')
+        #flash('something')
         return dict(value=value, model_name=model_name, action='create', root_catwalk='../../', root_model='./')
 
     @expose('genshi:catwalk.templates.base')
@@ -135,7 +135,7 @@ class CatwalkModel(BaseController):
         model = self.provider.get_entity(model_name)
         params = pylons.request.params.copy()
 
-        self.provider.create(model, values=kw)
+        self.provider.create(model, params=kw)
         raise redirect('../')
 
     @expose()
@@ -146,7 +146,7 @@ class CatwalkModel(BaseController):
         for i, pk in  enumerate(pks):
             kw[pk] = args[i]
 
-        self.provider.delete(model, values=kw)
+        self.provider.delete(model, params=kw)
         redirect('../')
 
 
