@@ -22,7 +22,7 @@ from dbsprockets.modelsprockets import ModelSprockets
 from catwalk.decorators import validate, crudErrorCatcher, validate
 from catwalk.resources import CatwalkCss
 
-from dbsprockets.primitives import SAORMDBHelper as helper
+from dbsprockets.providerselector import SAORMSelector
 
 from webhelpers.html.builder import literal
 
@@ -31,11 +31,26 @@ class BaseController(TGController):
     TGController
     """
     sprockets = None
-    def __init__(self, provider, *args, **kwargs):
-        self.provider = provider
-        self.sprockets = ModelSprockets(provider)
+    def __init__(self, session, metadata=None, *args, **kwargs):
+        self.session = session
+        self.provider = SAORMSelector.get_provider(None, session.bind, session=session)
+        self.sprockets = ModelSprockets(session, metadata)
         #initialize model view cache
 
+    def _get_value(self, config_name, model_name, **kw):
+        """This thing has some side effects!"""
+        pylons.c.models_view = self.models_view
+        CatwalkCss.inject()
+        key = config_name+'__'+model_name
+        print '%'*80
+        print key
+        sprocket = self.sprockets[key]
+        print sprocket.session.__entity__
+        value = sprocket.session.get_value(**kw)
+        pylons.c.widget  = sprocket.view.__widget__
+        return value
+
+    def _get_model_view(self):
         #commonly used views
         sprocket = self.sprockets['model_view']
         self.models_value = sprocket.session.get_value()
@@ -51,24 +66,16 @@ class BaseController(TGController):
 
 class CatwalkModel(BaseController):
 
-    sprockets = None
-    def _get_value(self, config_name, model_name, **kw):
-        """This thing has some side effects!"""
-        pylons.c.models_view = self.models_view
-        CatwalkCss.inject()
-        sprocket = self.sprockets[config_name+'__'+model_name]
-        value = sprocket.session.get_value(**kw)
-        pylons.c.widget  = sprocket.view.__widget__
-        return value
-
     @expose('genshi:catwalk.templates.base')
     def default(self, model_name, action=None, *args, **kw):
+        self._get_model_view()
+
         if action is None:
             if not pylons.request.path_info.endswith('/'):
                 redirect(pylons.request.path_info+'/')
             value = self._get_value('listing', model_name)
             return dict(value=value, model_name=model_name, action=None, root_catwalk='../../', root_model='./')
-        
+
         if action in ['add', 'metadata']:
             self.start_response = pylons.request.start_response
             return self._perform_call(None, dict(url=action+'/'+model_name, params=kw))
@@ -99,9 +106,8 @@ class CatwalkModel(BaseController):
         if args[-1] == 'delete':
             return self.delete(model_name, *args[:-1], **kw)
         #assign all of the pks to the session for extraction
-        model = helper.get_model(model_name, self.provider.metadata)
-        table_name = helper.get_identifier(model)
-        pks = self.provider.get_primary_keys(table_name)
+        model = self.provider.get_entity(model_name)
+        pks = self.provider.get_primary_fields(model)
         for i, pk in  enumerate(pks):
             kw[pk] = args[i]
         value = self._get_value('edit', model_name, **kw)
@@ -115,15 +121,14 @@ class CatwalkModel(BaseController):
     @crudErrorCatcher(errorType=sqlalchemy.exceptions.ProgrammingError, error_handler=edit)
     @crudErrorCatcher(errorType=sqlalchemy.exceptions.DataError, error_handler=edit)
     def update(self, model_name, *args, **kw):
-        model = helper.get_model(model_name, self.provider.metadata)
-        table_name = helper.get_identifier(model)
+        model = self.provider.get_entity(model_name)
+        pks = self.provider.get_primary_fields(model)
         params = pylons.request.params.copy()
-        pks = self.provider.get_primary_keys(table_name)
         for i, pk in  enumerate(pks):
             params[pk] = args[i]
-        self.provider.create_relationships(table_name, params)
+#        self.provider.create_relationships(model, params)
 
-        self.provider.edit(table_name, values=kw)
+        self.provider.update(model, values=kw)
         redirect('../')
 
     @expose()
@@ -132,36 +137,34 @@ class CatwalkModel(BaseController):
     @crudErrorCatcher(errorType=sqlalchemy.exceptions.ProgrammingError, error_handler=add)
     @crudErrorCatcher(errorType=sqlalchemy.exceptions.DataError, error_handler=add)
     def create(self, model_name, **kw):
-        model = helper.get_model(model_name, self.provider.metadata)
-        table_name = helper.get_identifier(model)
-
+        model = self.provider.get_entity(model_name)
         params = pylons.request.params.copy()
-        self.provider.create_relationships(table_name, params)
+        #self.provider.create_relationships(table_name, params)
 
-        self.provider.add(table_name, values=kw)
+        self.provider.create(model, values=kw)
         raise redirect('../')
 
     @expose()
     def delete(self, model_name, *args, **kw):
-        model = helper.get_model(model_name, self.provider.metadata)
-        table_name = helper.get_identifier(model)
-        pks = self.provider.get_primary_keys(table_name)
+        model = self.provider.get_entity(model_name)
+        pks = self.provider.get_primary_fields(model)
         kw = {}
         for i, pk in  enumerate(pks):
             kw[pk] = args[i]
 
-        self.provider.delete(table_name, values=kw)
+        self.provider.delete(model, values=kw)
         redirect('../')
 
 
 class Catwalk(BaseController):
 
-    def __init__(self, provider, *args, **kwargs):
-        self.model = CatwalkModel(provider)
-        super(Catwalk, self).__init__(provider, *args, **kwargs)
+    def __init__(self, session, *args, **kwargs):
+        self.model = CatwalkModel(session)
+        super(Catwalk, self).__init__(session, *args, **kwargs)
 
     @expose('genshi:catwalk.templates.index')
     def index(self):
+        self._get_model_view()
         if not pylons.request.path_info.endswith('/'):
             redirect(pylons.request.path_info+'/')
         pylons.c.models_view = self.models_view

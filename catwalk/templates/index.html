@@ -10,7 +10,7 @@
     <div id="model_list">
         <h2><a href='./'>Catwalk</a></h2>
         <h3>Models</h3>
-         ${XML(tmpl_context.models_view(controller='./'))}
+         ${XML(tmpl_context.models_view(controller='./model/'))}
     </div>
     <div id="main_view">
         <h1>Welcome to Catwalk 2.0</h1>
@@ -38,10 +38,8 @@ class SecuredCatwalk(Catwalk):
 </pre>
         Instantiate Catwalk
 <pre class="code">
-from myproject.model import metadata
-from dbsprockets.saprovider import SAProvider
 
-catwalk = SecuredCatwalk(SAProvider(metadata))
+catwalk = SecuredCatwalk('DBSession')
 </pre>
 
         <h2>Using Catwalk</h2>
