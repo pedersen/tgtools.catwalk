@@ -149,7 +149,6 @@ class CatwalkModel(BaseController):
         self.provider.delete(model, params=kw)
         redirect('../')
 
-
 class Catwalk(BaseController):
 
     def __init__(self, session, *args, **kwargs):
