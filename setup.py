@@ -16,9 +16,9 @@ setup(name='Catwalk',
       license='MIT',
       packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
       include_package_data=True,
-      zip_safe=True,
+      zip_safe=False,
       install_requires=[
-        'sprox>=0.5b1'  
+        'sprox>=0.5b1'
 	# -*- Extra requirements: -*-
       ],
       entry_points="""
