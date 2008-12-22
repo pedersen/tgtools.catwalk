@@ -18,7 +18,7 @@ setup(name='Catwalk',
       include_package_data=True,
       zip_safe=False,
       install_requires=[
-        'sprox>=0.5b1'
+        'sprox'
 	# -*- Extra requirements: -*-
       ],
       entry_points="""
