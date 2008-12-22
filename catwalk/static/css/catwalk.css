@@ -64,11 +64,10 @@ a{
 .code{
   font-weight:bold;
   background:#ddd;
-  width: 400px;
   align: center;
   border: 1px black solid;
-  margin: 5px;
-  padding: 5px;
+  margin: 10px;
+  padding: 10px;
 }
 label.required{
   color:blue;

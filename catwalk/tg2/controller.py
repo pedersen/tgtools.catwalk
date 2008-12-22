@@ -163,6 +163,7 @@ class Catwalk(BaseController):
         CatwalkCss.inject()
 
         pylons.c.main_view=Widget("widget")
-        return self.models_dict
-
+        d =self.models_dict
+        d['secured'] = (hasattr(self, 'allow_only') and self.allow_only != None)
+        return d
 
