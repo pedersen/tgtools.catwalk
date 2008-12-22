@@ -3,8 +3,7 @@ Catwalk Module
 
 Classes:
 Name                               Description
-DBMechanic
-
+Catwalk
 
 Copywrite (c) 2008 Christopher Perkins
 Original Version by Christopher Perkins 2007
@@ -17,10 +16,10 @@ from tw.api import Widget, CSSLink, Link
 import pylons
 from tg import TGController, redirect
 from tg.flash import flash, get_flash
-from dbsprockets.modelsprockets import ModelSprockets
-from dbsprockets.providerselector import SAORMSelector
+from sprox.sprockets import SprocketCache
+from sprox.providerselector import SAORMSelector
 
-from catwalk.decorators import validate, crudErrorCatcher, validate
+from decorators import validate, crudErrorCatcher, validate
 from catwalk.resources import CatwalkCss
 
 from webhelpers.html.builder import literal
@@ -35,21 +34,21 @@ class BaseController(TGController):
         #initialize the sa provider so we can get information about the classes
         self.provider = SAORMSelector.get_provider(None, session.bind, session=session)
         #initialize model view cache
-        self.sprockets = ModelSprockets(session, metadata)
+        self.sprockets = SprocketCache(session, metadata)
 
     def _get_value(self, config_name, model_name, **kw):
         pylons.c.models_view = self.models_view
         CatwalkCss.inject()
         key = config_name+'__'+model_name
         sprocket = self.sprockets[key]
-        value = sprocket.session.get_value(kw)
+        value = sprocket.filler.get_value(kw)
         pylons.c.widget  = sprocket.view.__widget__
         return value
 
     def _get_model_view(self):
         """get the highest level view"""
         sprocket = self.sprockets['model_view']
-        self.models_value = sprocket.session.get_value()
+        self.models_value = sprocket.filler.get_value()
         self.models_view  = sprocket.view.__widget__
         self.models_dict  = dict(models_value=self.models_value)
 
