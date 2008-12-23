@@ -11,7 +11,7 @@ class validate(tgValidate):
         class Validators(object):
             def validate(self, controller, params):
                 #pull the sprocket out of the cache
-                sprocket = controller.im_self.sprockets[params['dbsprockets_id']]
+                sprocket = controller.im_self.sprockets[params['sprox_id']]
                 #validate on it's widget
                 return sprocket.view.__widget__.validate(params)
         self.validators = Validators()
