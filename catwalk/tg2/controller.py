@@ -28,13 +28,15 @@ class BaseController(TGController):
     """Basis TurboGears controller class which is derived from
     TGController
     """
+    sprocketCacheType = SprocketCache
+
     sprockets = None
     def __init__(self, session, metadata=None, *args, **kwargs):
         self.session = session
         #initialize the sa provider so we can get information about the classes
         self.provider = SAORMSelector.get_provider(None, session.bind, session=session)
         #initialize model view cache
-        self.sprockets = SprocketCache(session, metadata)
+        self.sprockets = self.sprocketCacheType(session, metadata)
 
     def _get_value(self, config_name, model_name, **kw):
         pylons.c.models_view = self.models_view
@@ -61,6 +63,10 @@ class BaseController(TGController):
 
 class CatwalkModel(BaseController):
 
+    def _listing(self, model_name):
+        value = self._get_value('listing', model_name)
+        return dict(value=value, model_name=model_name, action=None, root_catwalk='../../', root_model='./')
+
     @expose('genshi:catwalk.templates.base')
     def default(self, model_name, action=None, *args, **kw):
         self._get_model_view()
@@ -68,8 +74,7 @@ class CatwalkModel(BaseController):
         if action is None:
             if not pylons.request.path_info.endswith('/'):
                 redirect(pylons.request.path_info+'/')
-            value = self._get_value('listing', model_name)
-            return dict(value=value, model_name=model_name, action=None, root_catwalk='../../', root_model='./')
+            return self._listing(model_name)
 
         if action in ['add', 'metadata']:
             self.start_response = pylons.request.start_response
@@ -149,9 +154,9 @@ class CatwalkModel(BaseController):
         redirect('../')
 
 class Catwalk(BaseController):
-
+    catwalkModelType = CatwalkModel
     def __init__(self, session, *args, **kwargs):
-        self.model = CatwalkModel(session)
+        self.model = self.catwalkModelType(session)
         super(Catwalk, self).__init__(session, *args, **kwargs)
 
     @expose('genshi:catwalk.templates.index')
