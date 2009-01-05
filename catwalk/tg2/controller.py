@@ -109,7 +109,8 @@ class CatwalkModel(BaseController):
         model = self.provider.get_entity(model_name)
         pks = self.provider.get_primary_fields(model)
         for i, pk in  enumerate(pks):
-            kw[pk] = args[i]
+            if pk not in kw and i < len(args):
+                kw[pk] = args[i]
         value = self._get_value('edit', model_name, **kw)
         root_model = '../'*len(pks)
         root_catwalk = root_model+'../../'
@@ -125,10 +126,11 @@ class CatwalkModel(BaseController):
         pks = self.provider.get_primary_fields(model)
         params = pylons.request.params.copy()
         for i, pk in  enumerate(pks):
-            params[pk] = args[i]
+            if pk not in kw and i < len(args):
+                params[pk] = args[i]
 
         self.provider.update(model, params=kw)
-        redirect('../')
+        redirect('./')
 
     @expose()
     @validate(error_handler=add)
