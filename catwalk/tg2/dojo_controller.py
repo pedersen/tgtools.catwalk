@@ -38,7 +38,7 @@ class DojoCatwalkModel(CatwalkModel):
     def data(self, model_name, **kw):
         key = 'listing__'+model_name
         sprocket = self.sprockets[key]
-        value = sprocket.filler.get_value(kw)
+        value = sprocket.filler.get_value(**kw)
         return value
 
 class DojoCatwalk(Catwalk):
