@@ -53,26 +53,27 @@ class TestCatwalkController:
         resp = self.app.get('/catwalk/')
         assert 'Document' in resp, resp
 
-    def _test_list_documents(self):
+    def test_list_documents(self):
         resp = self.app.get('/catwalk/model/Document').follow()
-        assert """<tr id="address.container" class="odd">
+        assert """</thead>
+    <tbody>
+    </tbody>
+</table>
+      No Records Found.
+</div>
+      </div>
+""" in resp, resp
+
+    def test_documents_add(self):
+        resp = self.app.get('/catwalk/model/Document/add')
+        assert """<tr id="blob.container" class="even">
             <td class="labelcol">
-                <label id="address.label" for="address" class="fieldlabel">Address</label>
+                <label id="blob.label" for="blob" class="fieldlabel">Blob</label>
             </td>
             <td class="fieldcol">
-                <input type="text" name="address" class="textfield" id="address" value="" />
+                <input type="file" name="blob" class="filefield" id="blob" value="" />
             </td>
         </tr>""" in resp, resp
-
-    def test_documents_new(self):
-        resp = self.app.get('/catwalk/model/Document/new')
-        assert """<td class="fieldcol">
-                <textarea id="url" name="url" class="textarea" rows="7" cols="50"></textarea>
-            </td>
-        </tr><tr id="address.container" class="odd">
-            <td class="labelcol">
-                <label id="address.label" for="address" class="fieldlabel">Address</label>
-            </td>""" in resp, resp
     def test_documents_metadata(self):
         resp = self.app.get('/catwalk/model/Document/metadata')
         assert """<td>
@@ -87,3 +88,48 @@ class TestCatwalkController:
         relation
     </td>
 """ in resp, resp
+
+    def test_list_users(self):
+        resp = self.app.get('/catwalk/model/User/')
+        assert """<tr class="even">
+            <td>
+            <a href="./1/">edit</a> |
+            <a href="./1/delete">delete</a>
+            </td>
+            <td>******</td><td>1</td><td>asdf</td><td>asdf@asdf.com</td><td>None</td><td>""" in resp, resp
+
+
+    def test_edit_user(self):
+        resp = self.app.get('/catwalk/model/User/1')
+        assert """<td class="fieldcol">
+                <select name="groups" class="propertymultipleselectfield" id="groups" multiple="multiple" size="5">
+        <option value="1">0</option><option value="2">1</option><option value="3">2</option><option value="4">3</option><option value="5" selected="selected">4</option>
+</select>
+            </td>
+        </tr><tr id="submit.container" class="even">
+            <td class="labelcol">
+            </td>
+            <td class="fieldcol">
+                <input type="submit" class="submitbutton" value="Submit" />
+            </td>""" in resp, resp
+
+    def test_edit_user_success(self):
+        resp = self.app.post('/catwalk/model/User/1/update', params={'user_id':'1', 'email_address':'asdf2@asdf2.com'}).follow()
+        assert 'asdf2@asdf2' in resp, resp
+        resp = self.app.post('/catwalk/model/User/1/update', params={'user_id':'1', 'email_address':'asdf@asdf.com'}).follow()
+        assert 'asdf@asdf' in resp, resp
+
+    def test_add_and_remove_user(self):
+        resp = self.app.post('/catwalk/model/User/create', params={'sprox_id':'add__User',
+                                                                   'user_name':'someone',
+                                                                   'display_name':'someone2',
+                                                                   'email_address':'asdf2@asdf2.com',
+                                                                   '_password':'pass',
+                                                                   'password':'pass',
+                                                                   'town':'1',
+                                                                   'town_id':'1',
+                                                                   'user_id':'2',
+                                                                   'created':'2009-01-11 13:54:01'}).follow().follow()
+        assert '<td>asdf2@asdf2' in resp, resp
+        resp = self.app.get('/catwalk/model/User/2/delete', params={'user_id':'2'}).follow()
+        assert 'asdf2@asdf2' not in resp, resp
