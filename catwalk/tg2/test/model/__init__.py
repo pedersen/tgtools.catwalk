@@ -221,23 +221,9 @@ class Document(DeclarativeBase):
     address = synonym('address', descriptor=property(_get_address,
                                                        _set_address))
 
+#model_initialized = False
+
 def init_model(engine):
-    """Call me before using any of the tables or classes in the model."""
+    global model_initialized
 
     DBSession.configure(bind=engine)
-    # If you are using reflection to introspect your database and create
-    # table objects for you, your tables must be defined and mapped inside
-    # the init_model function, so that the engine is available if you
-    # use the model outside tg2, you need to make sure this is called before
-    # you use the model.
-
-    #
-    # See the following example:
-
-    #metadata.bind = engine
-    #global t_reflected
-
-    #t_reflected = Table("Reflected", metadata,
-    #    autoload=True, autoload_with=engine)
-
-    #mapper(Reflected, t_reflected)
