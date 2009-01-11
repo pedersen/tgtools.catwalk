@@ -50,7 +50,7 @@ class TestCatwalkController:
         self.app = app_from_config(base_config)
 
     def test_index(self):
-        resp = self.app.get('/catwalk/')
+        resp = self.app.get('/catwalk').follow()
         assert 'Document' in resp, resp
 
     def test_list_documents(self):
@@ -114,9 +114,9 @@ class TestCatwalkController:
             </td>""" in resp, resp
 
     def test_edit_user_success(self):
-        resp = self.app.post('/catwalk/model/User/1/update', params={'user_id':'1', 'email_address':'asdf2@asdf2.com'}).follow()
+        resp = self.app.post('/catwalk/model/User/1/update', params={'email_address':'asdf2@asdf2.com'}).follow()
         assert 'asdf2@asdf2' in resp, resp
-        resp = self.app.post('/catwalk/model/User/1/update', params={'user_id':'1', 'email_address':'asdf@asdf.com'}).follow()
+        resp = self.app.post('/catwalk/model/User/1/update', params={'email_address':'asdf@asdf.com'}).follow()
         assert 'asdf@asdf' in resp, resp
 
     def test_add_and_remove_user(self):
@@ -133,3 +133,16 @@ class TestCatwalkController:
         assert '<td>asdf2@asdf2' in resp, resp
         resp = self.app.get('/catwalk/model/User/2/delete', params={'user_id':'2'}).follow()
         assert 'asdf2@asdf2' not in resp, resp
+
+    def test_add_user_existing_username(self):
+        resp = self.app.post('/catwalk/model/User/create', params={'sprox_id':'add__User',
+                                                                   'user_name':u'asdf',
+                                                                   'display_name':'someone2',
+                                                                   'email_address':'asdf2@asdf2.com',
+                                                                   '_password':'pass',
+                                                                   'password':'pass',
+                                                                   'town':'1',
+                                                                   'town_id':'1',
+                                                                   'user_id':'2',
+                                                                   'created':'2009-01-11 13:54:01'})
+        assert 'That value already exists' in resp, resp

@@ -129,7 +129,7 @@ class CatwalkModel(BaseController):
             if pk not in kw and i < len(args):
                 params[pk] = args[i]
 
-        self.provider.update(model, params=kw)
+        self.provider.update(model, params=params)
         redirect('./')
 
     @expose()
