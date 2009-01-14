@@ -16,7 +16,7 @@ from tg.decorators import expose, validate, with_trailing_slash, without_trailin
 from tg.controllers import redirect, TGController, RestController
 from tg.flash import flash
 
-from tgext.crud.decorators import catch_crud_errors, registered_validate, register_validators
+from tgext.crud.decorators import catch_errors, registered_validate, register_validators
 from catwalk.resources import CatwalkCss as catwalk_css
 
 from sprox.providerselector import SAORMSelector
@@ -156,7 +156,7 @@ class CatwalkModelController(RestController):
     
     @expose()
     @registered_validate(error_handler=edit)
-    @catch_crud_errors(SQLAlchemyError, error_handler=new)
+    @catch_errors(SQLAlchemyError, error_handler=new)
     def put(self, *args, **kw):
         pks = self.provider.get_primary_fields(self.model)
         params = pylons.request.params.copy()
@@ -169,7 +169,7 @@ class CatwalkModelController(RestController):
 
     @expose()
     @registered_validate(error_handler=new)
-    @catch_crud_errors(SQLAlchemyError, error_handler=new)
+    @catch_errors(SQLAlchemyError, error_handler=new)
     def post(self, **kw):
         self.provider.create(self.model, params=kw)
         raise redirect('./')
