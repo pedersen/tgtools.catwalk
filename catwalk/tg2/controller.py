@@ -47,7 +47,8 @@ class CatwalkModelController(RestController):
     new_form_type         = AddRecordForm
     edit_form_filler_type = EditFormFiller
     new_form_filler_type  = AddFormFiller
-    table_def             = EntityDefBase
+    entity_def_type       = EntityDefBase
+    get_action            = './'
     
     def __init__(self, model_name, provider, config=None):
         self.model_name = model_name
@@ -62,6 +63,9 @@ class CatwalkModelController(RestController):
         
         self.table = None
         self.table_filler = None
+        
+        print self.table_base_type
+        print self
         
         class TableType(self.table_base_type):
             __entity__ = self.model
@@ -89,7 +93,7 @@ class CatwalkModelController(RestController):
             __entity__ = self.model
         self.new_form_filler = EditFormFillerType(self.session)
         
-        class EntityDef(EntityDefBase):
+        class EntityDef(self.entity_def_type):
             __entity__ = self.model
         self.entity_def = EntityDef(self.session)
 
@@ -108,7 +112,7 @@ class CatwalkModelController(RestController):
 
         pylons.c.widget = self.table
         
-        return dict(value=value, action='./', model_name=self.model_name)
+        return dict(value=value, action=self.get_action, model_name=self.model_name)
     
     #xxx: add get_one
 
