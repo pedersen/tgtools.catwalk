@@ -10,17 +10,20 @@ Original Version by Christopher Perkins 2007
 Released under MIT license.
 """
 import pylons
-import sqlalchemy
+from sqlalchemy.exc import SQLAlchemyError
 
 from tg.decorators import expose, validate, with_trailing_slash, without_trailing_slash
 from tg.controllers import redirect, TGController, RestController
 from tg.flash import flash
 
-from decorators import crudErrorCatcher
+from tgext.crud.decorators import catch_crud_errors, registered_validate, register_validators
 from catwalk.resources import CatwalkCss as catwalk_css
 
-from sprox.entitiesbase import EntitiesBase
 from sprox.providerselector import SAORMSelector
+from sprox.fillerbase import AddFormFiller, EditFormFiller, TableFiller, AddFormFiller
+from sprox.formbase import AddRecordForm, EditableForm
+from sprox.tablebase import TableBase
+from sprox.entitiesbase import EntitiesBase, EntityDefBase
 
 engine = 'genshi'
 try:
@@ -36,10 +39,6 @@ try:
 except ImportError:
     pass
 
-from sprox.fillerbase import AddFormFiller, EditFormFiller, TableFiller, AddFormFiller
-from sprox.formbase import AddRecordForm, EditableForm
-from sprox.tablebase import TableBase
-
 class CatwalkModelController(RestController):
     
     table_base_type       = TableBase
@@ -48,6 +47,7 @@ class CatwalkModelController(RestController):
     new_form_type         = AddRecordForm
     edit_form_filler_type = EditFormFiller
     new_form_filler_type  = AddFormFiller
+    table_def             = EntityDefBase
     
     def __init__(self, model_name, provider, config=None):
         self.model_name = model_name
@@ -74,8 +74,7 @@ class CatwalkModelController(RestController):
         class EditFormType(self.edit_form_type):
             __entity__ = self.model
         self.edit_form = EditFormType(self.session)
-        #assign this form to the validator
-        self.put.decoration.validation.validators  = self.edit_form
+        register_validators(self, 'put', self.edit_form)
 
         class EditFormFillerType(self.edit_form_filler_type):
             __entity__ = self.model
@@ -84,12 +83,15 @@ class CatwalkModelController(RestController):
         class NewFormType(self.new_form_type):
             __entity__ = self.model
         self.new_form = NewFormType(self.session)
-        #assign this form to the validator
-        self.post.decoration.validation.validators  = self.new_form
+        register_validators(self, 'post', self.new_form)
 
         class NewFormFillerType(self.new_form_filler_type):
             __entity__ = self.model
         self.new_form_filler = EditFormFillerType(self.session)
+        
+        class EntityDef(EntityDefBase):
+            __entity__ = self.model
+        self.entity_def = EntityDef(self.session)
 
     @with_trailing_slash
     @expose(engine+':catwalk.templates.base')
@@ -109,8 +111,16 @@ class CatwalkModelController(RestController):
         return dict(value=value, action='./', model_name=self.model_name)
     
     #xxx: add get_one
-    
-    #xxx: add metadata
+
+    @expose(engine+':catwalk.templates.base')
+    def metadata(self, *args, **kw):
+        """Show the definition for the given model"""
+        catwalk_css.inject()
+        pylons.c.models_widget = self.models_view
+        
+        pylons.c.widget = self.entity_def
+        return dict(value=None, action='./', model_name=self.model_name)
+
 
     @without_trailing_slash
     @expose(engine+':catwalk.templates.base')
@@ -141,10 +151,8 @@ class CatwalkModelController(RestController):
         return dict(value=value, action='./', model_name=self.model_name)
     
     @expose()
-    @validate(error_handler=edit)
-    @crudErrorCatcher(errorType=sqlalchemy.exceptions.IntegrityError, error_handler=edit)
-    @crudErrorCatcher(errorType=sqlalchemy.exceptions.ProgrammingError, error_handler=edit)
-    @crudErrorCatcher(errorType=sqlalchemy.exceptions.DataError, error_handler=edit)
+    @registered_validate(error_handler=edit)
+    @catch_crud_errors(SQLAlchemyError, error_handler=new)
     def put(self, *args, **kw):
         pks = self.provider.get_primary_fields(self.model)
         params = pylons.request.params.copy()
@@ -152,18 +160,12 @@ class CatwalkModelController(RestController):
             if pk not in kw and i < len(args):
                 params[pk] = args[i]
 
-<<<<<<< .mine
         self.provider.update(self.model, params=kw)
-=======
-        self.provider.update(model, params=params)
->>>>>>> .r179
         redirect('./')
 
     @expose()
-    @validate(error_handler=new)
-    @crudErrorCatcher(errorType=sqlalchemy.exceptions.IntegrityError, error_handler=new)
-    @crudErrorCatcher(errorType=sqlalchemy.exceptions.ProgrammingError, error_handler=new)
-    @crudErrorCatcher(errorType=sqlalchemy.exceptions.DataError, error_handler=new)
+    @registered_validate(error_handler=new)
+    @catch_crud_errors(SQLAlchemyError, error_handler=new)
     def post(self, **kw):
         self.provider.create(self.model, params=kw)
         raise redirect('./')
@@ -189,7 +191,7 @@ class Catwalk(TGController):
         super(Catwalk, self).__init__(session, *args, **kwargs)
 
     @with_trailing_slash
-    @expose('genshi:catwalk.templates.index')
+    @expose(engine+':catwalk.templates.index')
     def index(self):
         pylons.c.models_view = self.models_view
         catwalk_css.inject()
