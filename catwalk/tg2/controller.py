@@ -9,168 +9,195 @@ Copywrite (c) 2008 Christopher Perkins
 Original Version by Christopher Perkins 2007
 Released under MIT license.
 """
-import sqlalchemy
-from tg.decorators import expose
-from tg.controllers import redirect, DecoratedController
-from tw.api import Widget, CSSLink, Link
 import pylons
-from tg import TGController, redirect
-from tg.flash import flash, get_flash
-from sprox.sprockets import SprocketCache
+import sqlalchemy
+
+from tg.decorators import expose, validate, with_trailing_slash, without_trailing_slash
+from tg.controllers import redirect, TGController, RestController
+from tg.flash import flash
+
+from decorators import crudErrorCatcher
+from catwalk.resources import CatwalkCss as catwalk_css
+
+from sprox.entitiesbase import EntitiesBase
 from sprox.providerselector import SAORMSelector
 
-from decorators import validate, crudErrorCatcher, validate
-from catwalk.resources import CatwalkCss
+engine = 'genshi'
+try:
+    import chameleon.genshi
+    import pylons.config
+    if 'chameleon_genshi' in pylons.config['renderers']:
+        engine = 'chameleon_genshi'
+    else:
+        import warnings
+        warnings.warn('The renderer for \'chameleon_genshi\' templates is missing.'\
+                      'Your code could run much faster if you'\
+                      'add the following line in you app_cfg.py: "base_config.renderers.append(\'chameleon_genshi\')"')
+except ImportError:
+    pass
 
-from webhelpers.html.builder import literal
+from sprox.fillerbase import AddFormFiller, EditFormFiller, TableFiller, AddFormFiller
+from sprox.formbase import AddRecordForm, EditableForm
+from sprox.tablebase import TableBase
 
-class BaseController(TGController):
-    """Basis TurboGears controller class which is derived from
-    TGController
-    """
-    sprocketCacheType = SprocketCache
+class CatwalkModelController(RestController):
+    
+    table_base_type       = TableBase
+    table_filler_type     = TableFiller
+    edit_form_type        = EditableForm
+    new_form_type         = AddRecordForm
+    edit_form_filler_type = EditFormFiller
+    new_form_filler_type  = AddFormFiller
+    
+    def __init__(self, model_name, provider, config=None):
+        self.model_name = model_name
 
-    sprockets = None
-    def __init__(self, session, metadata=None, *args, **kwargs):
-        self.session = session
-        #initialize the sa provider so we can get information about the classes
-        self.provider = SAORMSelector.get_provider(None, session.bind, session=session)
-        #initialize model view cache
-        self.sprockets = self.sprocketCacheType(session, metadata)
+        self.provider = provider
+        self.session = self.provider.session
+        self.model    = self.provider.get_entity(model_name)
+        self.model_name = model_name
+        self.models_view = EntitiesBase(self.session)
+        
+        self.config = config
+        
+        self.table = None
+        self.table_filler = None
+        
+        class TableType(self.table_base_type):
+            __entity__ = self.model
+        self.table = TableType(self.session)
+        
+        class TableFillerType(self.table_filler_type):
+            __entity__ = self.model
+        self.table_filler = TableFillerType(self.session)
+        
+        class EditFormType(self.edit_form_type):
+            __entity__ = self.model
+        self.edit_form = EditFormType(self.session)
+        #assign this form to the validator
+        self.put.decoration.validation.validators  = self.edit_form
 
-    def _get_value(self, config_name, model_name, **kw):
-        pylons.c.models_view = self.models_view
-        CatwalkCss.inject()
-        key = config_name+'__'+model_name
-        sprocket = self.sprockets[key]
-        value = sprocket.filler.get_value(kw)
-        pylons.c.widget  = sprocket.view.__widget__
-        return value
+        class EditFormFillerType(self.edit_form_filler_type):
+            __entity__ = self.model
+        self.edit_form_filler = EditFormFillerType(self.session)
 
-    def _get_model_view(self):
-        """get the highest level view"""
-        sprocket = self.sprockets['model_view']
-        self.models_value = sprocket.filler.get_value()
-        self.models_view  = sprocket.view.__widget__
-        self.models_dict  = dict(models_value=self.models_value)
+        class NewFormType(self.new_form_type):
+            __entity__ = self.model
+        self.new_form = NewFormType(self.session)
+        #assign this form to the validator
+        self.post.decoration.validation.validators  = self.new_form
 
-    def __call__(self, environ, start_response):
-        """Invoke the Controller"""
-        try:
-            return TGController.__call__(self, environ, start_response)
-        finally:
-            pass
+        class NewFormFillerType(self.new_form_filler_type):
+            __entity__ = self.model
+        self.new_form_filler = EditFormFillerType(self.session)
 
-class CatwalkModel(BaseController):
+    @with_trailing_slash
+    @expose(engine+':catwalk.templates.base')
+    @expose('json')
+    def get_all(self, *args, **kw):
+        """Show all records for a given model."""
+        catwalk_css.inject()
+        pylons.c.models_widget = self.models_view
+        
+        value = self.table_filler.get_value(kw)
+        
+        if pylons.request.response_type == 'application/json':
+            return value
 
-    def _listing(self, model_name):
-        value = self._get_value('listing', model_name)
-        return dict(value=value, model_name=model_name, action=None, root_catwalk='../../', root_model='./')
+        pylons.c.widget = self.table
+        
+        return dict(value=value, action='./', model_name=self.model_name)
+    
+    #xxx: add get_one
+    
+    #xxx: add metadata
 
-    @expose('genshi:catwalk.templates.base')
-    def default(self, model_name, action=None, *args, **kw):
-        self._get_model_view()
-
-        if action is None:
-            if not pylons.request.path_info.endswith('/'):
-                redirect(pylons.request.path_info+'/')
-            return self._listing(model_name)
-
-        if action in ['add', 'metadata']:
-            self.start_response = pylons.request.start_response
-            return self._perform_call(None, dict(url=action+'/'+model_name, params=kw))
-
-        elif action == 'create':
-            self.start_response = pylons.request.start_response
-            r = self._perform_call(None, dict(url='create/'+model_name, params=kw))
-            if isinstance(r, literal):
-                return r
-            redirect(str('../'+model_name))
-        return self.edit(model_name, action, *args, **kw)
-
-    @expose('genshi:catwalk.templates.base')
-    def metadata(self, model_name, **kw):
-        value = self._get_value('metadata', model_name)
-        return dict(value=value, model_name=model_name, action=None, root_catwalk='../../', root_model='./')
-
-    @expose('genshi:catwalk.templates.base')
-    def add(self, model_name, **kw):
-        value = self._get_value('add', model_name, values=kw)
-        #flash('something')
-        return dict(value=value, model_name=model_name, action='create', root_catwalk='../../', root_model='./')
-
-    @expose('genshi:catwalk.templates.base')
-    def edit(self, model_name, *args, **kw):
-        if args[-1] == 'update':
-            return self.update(model_name, *args[:-1], **kw)
-        if args[-1] == 'delete':
-            return self.delete(model_name, *args[:-1], **kw)
-        #assign all of the pks to the session for extraction
-        model = self.provider.get_entity(model_name)
-        pks = self.provider.get_primary_fields(model)
+    @without_trailing_slash
+    @expose(engine+':catwalk.templates.base')
+    def edit(self, *args, **kw):
+        """Display a page to edit the record."""
+        catwalk_css.inject()
+        pylons.c.models_widget = self.models_view
+        
+        pylons.c.widget = self.edit_form
+        pks = self.provider.get_primary_fields(self.model)
+        kw = {}
         for i, pk in  enumerate(pks):
-            if pk not in kw and i < len(args):
-                kw[pk] = args[i]
-        value = self._get_value('edit', model_name, **kw)
-        root_model = '../'*len(pks)
-        root_catwalk = root_model+'../../'
-        return dict(value=value, model_name=model_name, action='update', root_catwalk=root_catwalk, root_model=root_model)
+            kw[pk] = args[i]
+        value = self.edit_form_filler.get_value(kw)
+        value['_method'] = 'PUT'
+        return dict(value=value, action='./', model_name=self.model_name)
 
+    @without_trailing_slash
+    @expose(engine+':catwalk.templates.base')
+    def new(self, *args, **kw):
+        """Display a page to edit the record."""
+        catwalk_css.inject()
+        pylons.c.models_widget = self.models_view
+        
+        pylons.c.widget = self.new_form
+        #xxx: fix this so it gets the defaults for the form
+        value = None #self.new_form_filler.get_value(kw)
+        return dict(value=value, action='./', model_name=self.model_name)
+    
     @expose()
     @validate(error_handler=edit)
     @crudErrorCatcher(errorType=sqlalchemy.exceptions.IntegrityError, error_handler=edit)
     @crudErrorCatcher(errorType=sqlalchemy.exceptions.ProgrammingError, error_handler=edit)
     @crudErrorCatcher(errorType=sqlalchemy.exceptions.DataError, error_handler=edit)
-    def update(self, model_name, *args, **kw):
-        model = self.provider.get_entity(model_name)
-        pks = self.provider.get_primary_fields(model)
+    def put(self, *args, **kw):
+        pks = self.provider.get_primary_fields(self.model)
         params = pylons.request.params.copy()
         for i, pk in  enumerate(pks):
             if pk not in kw and i < len(args):
                 params[pk] = args[i]
 
+<<<<<<< .mine
+        self.provider.update(self.model, params=kw)
+=======
         self.provider.update(model, params=params)
+>>>>>>> .r179
         redirect('./')
 
     @expose()
-    @validate(error_handler=add)
-    @crudErrorCatcher(errorType=sqlalchemy.exceptions.IntegrityError, error_handler=add)
-    @crudErrorCatcher(errorType=sqlalchemy.exceptions.ProgrammingError, error_handler=add)
-    @crudErrorCatcher(errorType=sqlalchemy.exceptions.DataError, error_handler=add)
-    def create(self, model_name, **kw):
-        model = self.provider.get_entity(model_name)
-        params = pylons.request.params.copy()
+    @validate(error_handler=new)
+    @crudErrorCatcher(errorType=sqlalchemy.exceptions.IntegrityError, error_handler=new)
+    @crudErrorCatcher(errorType=sqlalchemy.exceptions.ProgrammingError, error_handler=new)
+    @crudErrorCatcher(errorType=sqlalchemy.exceptions.DataError, error_handler=new)
+    def post(self, **kw):
+        self.provider.create(self.model, params=kw)
+        raise redirect('./')
 
-        self.provider.create(model, params=kw)
-        raise redirect('../')
-
+    #xxx: make this get_delete
     @expose()
-    def delete(self, model_name, *args, **kw):
-        model = self.provider.get_entity(model_name)
-        pks = self.provider.get_primary_fields(model)
+    def delete(self, *args, **kw):
+        pks = self.provider.get_primary_fields(self.model)
         kw = {}
         for i, pk in  enumerate(pks):
             kw[pk] = args[i]
-
-        self.provider.delete(model, params=kw)
+        self.provider.delete(self.model, params=kw)
         redirect('../')
 
-class Catwalk(BaseController):
-    catwalkModelType = CatwalkModel
-    def __init__(self, session, *args, **kwargs):
-        self.model = self.catwalkModelType(session)
+class Catwalk(TGController):
+    catwalkModelControllerType = CatwalkModelController
+    
+    def __init__(self, session, metadata=None, *args, **kwargs):
+        self.session = session
+        self.provider = SAORMSelector.get_provider(session=session, metadata=metadata)
+        self.model_controllers = {}
+        self.models_view = EntitiesBase(session)
         super(Catwalk, self).__init__(session, *args, **kwargs)
 
+    @with_trailing_slash
     @expose('genshi:catwalk.templates.index')
     def index(self):
-        self._get_model_view()
-        if not pylons.request.path_info.endswith('/'):
-            redirect(pylons.request.path_info+'/')
         pylons.c.models_view = self.models_view
-        CatwalkCss.inject()
+        catwalk_css.inject()
+        
+        return dict(secured=(hasattr(self, 'allow_only') and self.allow_only != None))
 
-        pylons.c.main_view=Widget("widget")
-        d =self.models_dict
-        d['secured'] = (hasattr(self, 'allow_only') and self.allow_only != None)
-        return d
-
+    @expose()
+    def lookup(self, model_name, *args, **kw):
+        if model_name not in self.model_controllers:
+            self.model_controllers[model_name] = self.catwalkModelControllerType(model_name, self.provider)
+        return self.model_controllers[model_name], args

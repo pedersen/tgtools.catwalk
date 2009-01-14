@@ -8,13 +8,13 @@
 <head></head>
 <body>
       <div id="model_list">
-            <h2><a href='${root_catwalk}'>Catwalk</a></h2>
+            <h2><a href='../../'>Catwalk</a></h2>
             <h3>Models</h3>
-            ${XML(tmpl_context.models_view(controller=root_catwalk+'model/'))}
+            ${tmpl_context.models_widget(controller='../')}
       </div>
       <div id="main_view">
       <h3>${model_name}s</h3>
-      <a href='${root_model}'>listing</a> | <a href='${root_model}add'>add</a> | <a href='${root_model}metadata'>metadata</a>
+      <a href='./'>listing</a> | <a href='./new'>add</a> | <a href='./metadata'>metadata</a>
       <hr/>
       ${XML(tmpl_context.widget(value=value, action=action, controller='./'))}
       </div>
