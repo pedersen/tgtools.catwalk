@@ -18,7 +18,8 @@ setup(name='Catwalk',
       include_package_data=True,
       zip_safe=False,
       install_requires=[
-        'sprox'
+        'sprox',
+        'tgext.crud',
 	# -*- Extra requirements: -*-
       ],
       entry_points="""
