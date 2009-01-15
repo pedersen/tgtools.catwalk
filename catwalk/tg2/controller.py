@@ -109,7 +109,7 @@ class CatwalkModelController(RestController):
 
         pylons.c.widget = self.table
         
-        return dict(value=value, action=self.get_action, model_name=self.model_name)
+        return dict(value=value, action=self.get_action, model_name=self.model_name, model_root='./')
     
     #xxx: add get_one
 
@@ -120,7 +120,7 @@ class CatwalkModelController(RestController):
         pylons.c.models_widget = self.models_view
         
         pylons.c.widget = self.entity_def
-        return dict(value=None, action='./', model_name=self.model_name)
+        return dict(value=None, action='./', model_name=self.model_name, model_root='./')
 
 
     @without_trailing_slash
@@ -137,7 +137,7 @@ class CatwalkModelController(RestController):
             kw[pk] = args[i]
         value = self.edit_form_filler.get_value(kw)
         value['_method'] = 'PUT'
-        return dict(value=value, action='./', model_name=self.model_name)
+        return dict(value=value, action='./', model_name=self.model_name, model_root='../')
 
     @without_trailing_slash
     @expose(engine+':catwalk.templates.base')
@@ -149,7 +149,7 @@ class CatwalkModelController(RestController):
         pylons.c.widget = self.new_form
         #xxx: fix this so it gets the defaults for the form
         value = None #self.new_form_filler.get_value(kw)
-        return dict(value=value, action='./', model_name=self.model_name)
+        return dict(value=value, action='./', model_name=self.model_name, model_root='./')
     
     @expose()
     @registered_validate(error_handler=edit)
