@@ -29,7 +29,7 @@ engine = 'genshi'
 try:
     import chameleon.genshi
     import pylons.config
-    if 'chameleon_genshi' in pylons.config['renderers']:
+    if 'renderers' in pylons.config and 'chameleon_genshi' in pylons.config['renderers']:
         engine = 'chameleon_genshi'
     else:
         import warnings
@@ -63,9 +63,6 @@ class CatwalkModelController(RestController):
         
         self.table = None
         self.table_filler = None
-        
-        print self.table_base_type
-        print self
         
         class TableType(self.table_base_type):
             __entity__ = self.model
@@ -159,13 +156,13 @@ class CatwalkModelController(RestController):
     @catch_errors(SQLAlchemyError, error_handler=new)
     def put(self, *args, **kw):
         pks = self.provider.get_primary_fields(self.model)
-        params = pylons.request.params.copy()
-        for i, pk in  enumerate(pks):
+        params = kw
+        for i, pk in enumerate(pks):
             if pk not in kw and i < len(args):
                 params[pk] = args[i]
 
-        self.provider.update(self.model, params=kw)
-        redirect('./')
+        self.provider.update(self.model, params=params)
+        redirect('../')
 
     @expose()
     @registered_validate(error_handler=new)
