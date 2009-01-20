@@ -189,7 +189,7 @@ class Catwalk(TGController):
         self.provider = SAORMSelector.get_provider(session=session, metadata=metadata)
         self.model_controllers = {}
         self.models_view = EntitiesBase(session)
-        super(Catwalk, self).__init__(session, *args, **kwargs)
+        super(Catwalk, self).__init__(*args, **kwargs)
 
     @with_trailing_slash
     @expose(engine+':catwalk.templates.index')
