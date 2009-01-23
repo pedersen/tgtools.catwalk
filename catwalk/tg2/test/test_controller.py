@@ -1,5 +1,5 @@
 import os, sys
-from catwalk.test.base import setup_database, setup_records
+#from catwalk.test.base import setup_database, setup_records
 import catwalk
 from tg.test_stack import TestConfig, app_from_config
 from tg.util import Bunch
