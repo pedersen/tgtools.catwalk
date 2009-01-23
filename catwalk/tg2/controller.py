@@ -24,6 +24,8 @@ from sprox.fillerbase import AddFormFiller, EditFormFiller, TableFiller, AddForm
 from sprox.formbase import AddRecordForm, EditableForm
 from sprox.tablebase import TableBase
 from sprox.entitiesbase import EntitiesBase, EntityDefBase
+from tg.exceptions import HTTPNotFound
+
 
 engine = 'genshi'
 try:
@@ -202,5 +204,9 @@ class Catwalk(TGController):
     @expose()
     def lookup(self, model_name, *args, **kw):
         if model_name not in self.model_controllers:
+            try:
+                entity = self.provider.get_entity(model_name)
+            except KeyError:
+                raise HTTPNotFound().exception
             self.model_controllers[model_name] = self.catwalkModelControllerType(model_name, self.provider)
         return self.model_controllers[model_name], args
