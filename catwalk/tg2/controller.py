@@ -111,7 +111,7 @@ class CatwalkModelController(RestController):
 
         pylons.c.widget = self.table
         
-        return dict(value=value, action=self.get_action, model_name=self.model_name, model_root='./')
+        return dict(value=value, action='../'+self.model_name+'.json', model_name=self.model_name, model_root='./')
     
     #xxx: add get_one
 
