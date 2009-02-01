@@ -1,15 +1,14 @@
 from setuptools import setup, find_packages
 import sys, os
 
-version = '2.0'
+version = '2.0.1'
 
 setup(name='Catwalk',
       version=version,
-      description="A way to view your models usingg TurboGears",
-      long_description="""\
-""",
-      classifiers=[], # Get strings from http://pypi.python.org/pypi?%3Aaction=list_classifiers
-      keywords='sqlalchemy, TurboGears, DBSprockets',
+      description="A way to view your models using TurboGears",
+      long_description="""""",
+      classifiers=[], 
+      keywords='sqlalchemy, TurboGears, Sprox, tgext.admin',
       author='Christopher Perkins',
       author_email='chris@percious.com',
       url='http://code.google.com/p/tgtools/wiki/Catwalk',
@@ -19,10 +18,6 @@ setup(name='Catwalk',
       zip_safe=False,
       install_requires=[
         'sprox',
-        'tgext.crud',
-	# -*- Extra requirements: -*-
+        'tgext.admin',
       ],
-      entry_points="""
-      # -*- Entry points: -*-
-      """,
       )
