@@ -36,4 +36,4 @@ class Catwalk(AdminController):
             
             warnings.warn("""metadata variable is deprecated and no longer needed.  Please send in a list of models
 or your model module for catwalk to find your models  The new signiture is  Catalk(models, DBSession)""")
-        super(Catwalk, self).__init__(models, session)
+        super(Catwalk, self).__init__(models, session, config_type=self.config_type)
